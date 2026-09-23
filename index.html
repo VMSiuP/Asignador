@@ -82,7 +82,7 @@ footer{text-align:center;padding:20px;font-size:.75rem;color:var(--muted);font-f
 }
 </style>
 </head>
-<body data-theme="light">
+<body>
 <header>
   <div>
     <h1>⚖️ Asignador</h1>
@@ -167,9 +167,9 @@ const $=id=>document.getElementById(id);
 const LS_KEY='asignador_casos_v1', LS_THEME='asignador_theme';
 
 // Tema
-function applyTheme(t){document.body.setAttribute('data-theme',t);localStorage.setItem(LS_THEME,t)}
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem(LS_THEME,t)}
 applyTheme(localStorage.getItem(LS_THEME)||'light');
-$('themeBtn').onclick=()=>applyTheme(document.body.getAttribute('data-theme')==='light'?'dark':'light');
+$('themeBtn').onclick=()=>applyTheme((document.documentElement.getAttribute('data-theme')||'light')==='light'?'dark':'light');
 
 // Unidad "Otro"
 $('unidad').onchange=()=>{$('unidadOtroWrap').style.display=$('unidad').value==='otro'?'block':'none'};
