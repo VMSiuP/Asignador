@@ -1,4 +1,4 @@
-const CACHE = 'asignador-v1';
+const CACHE = 'asignador-v2';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', (e) => {
@@ -15,12 +15,28 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
+// El documento HTML: red primero (para no quedar atrapado en una versión vieja
+// cacheada); si no hay conexión, cae a la copia en caché.
+// El resto de archivos (manifest, ícono): caché primero, con actualización en segundo plano.
 self.addEventListener('fetch', (e) => {
+  if (e.request.mode === 'navigate' || e.request.destination === 'document') {
+    e.respondWith(
+      fetch(e.request).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy));
+        return res;
+      }).catch(() => caches.match(e.request).then((cached) => cached || caches.match('./index.html')))
+    );
+    return;
+  }
   e.respondWith(
-    caches.match(e.request).then((cached) => cached || fetch(e.request).then((res) => {
-      const copy = res.clone();
-      caches.open(CACHE).then((c) => c.put(e.request, copy));
-      return res;
-    }).catch(() => cached))
+    caches.match(e.request).then((cached) => {
+      const network = fetch(e.request).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy));
+        return res;
+      }).catch(() => cached);
+      return cached || network;
+    })
   );
 });
