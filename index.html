@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Asignador</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#8B0000">
+<style>
+:root{
+  --red:#8B0000; --red-dark:#5c0000; --gold:#C8A84B; --gold-light:#DFC070;
+  --bg:#f6f4ef; --card:#ffffff; --text:#241a14; --muted:#79695c; --border:#e4dccb;
+  --ok:#2e7d32; --warn:#b8860b; --bad:#a11212;
+}
+:root[data-theme="dark"]{
+  --bg:#1b1310; --card:#2a1e18; --text:#f1e9de; --muted:#b7a793; --border:#4a382c;
+  --ok:#5fbf6b; --warn:#e0b030; --bad:#ff6b5e;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; font-family:'Georgia',serif; background:var(--bg); color:var(--text);
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  min-height:100%;
+}
+header{
+  background:linear-gradient(135deg,var(--red),var(--red-dark)); color:#fff;
+  padding:16px 20px calc(16px + env(safe-area-inset-top,0px));
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  border-bottom:4px solid var(--gold);
+}
+header h1{margin:0;font-size:1.4rem;letter-spacing:.5px}
+header .sub{font-size:.75rem;color:var(--gold-light);font-family:Arial,sans-serif}
+.btn{
+  border:1px solid var(--gold); background:transparent; color:var(--gold-light);
+  padding:8px 14px; border-radius:8px; cursor:pointer; font-family:Arial,sans-serif; font-size:.85rem;
+}
+.btn:hover{background:rgba(200,168,75,.15)}
+.btn.primary{background:var(--gold); color:var(--red-dark); font-weight:bold; border-color:var(--gold)}
+main{max-width:1100px;margin:0 auto;padding:20px;}
+.card{
+  background:var(--card); border:1px solid var(--border); border-radius:14px;
+  padding:18px; margin-bottom:20px; box-shadow:0 2px 10px rgba(0,0,0,.06);
+}
+.card h2{margin-top:0;font-size:1.05rem;color:var(--red);border-bottom:2px solid var(--gold);padding-bottom:6px}
+:root[data-theme="dark"] .card h2{color:var(--gold-light)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+label{display:block;font-size:.75rem;color:var(--muted);margin-bottom:4px;font-family:Arial,sans-serif}
+input,select{
+  width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border);
+  background:var(--bg); color:var(--text); font-family:Arial,sans-serif; font-size:.9rem;
+}
+.caso-preview{
+  font-family:'Courier New',monospace; font-weight:bold; color:var(--red); font-size:1.1rem;
+  background:var(--bg); padding:8px 12px; border-radius:8px; border:1px dashed var(--gold);
+  display:inline-block; margin-top:8px;
+}
+:root[data-theme="dark"] .caso-preview{color:var(--gold-light)}
+.actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:10px}
+.filters>div{flex:1;min-width:140px}
+table{width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:.83rem}
+th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:normal;text-transform:uppercase;font-size:.7rem}
+.chip{padding:3px 9px;border-radius:20px;font-size:.72rem;font-weight:bold;color:#fff;display:inline-block}
+.chip.ok{background:var(--ok)} .chip.warn{background:var(--warn);color:#3a2a00} .chip.bad{background:var(--bad)}
+.tbl-wrap{overflow-x:auto}
+.icon-btn{background:none;border:none;cursor:pointer;font-size:1rem;color:var(--muted)}
+.icon-btn:hover{color:var(--red)}
+footer{text-align:center;padding:20px;font-size:.75rem;color:var(--muted);font-family:Arial,sans-serif}
+#dedico{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:99;padding:20px;
+}
+#dedico .box{background:var(--card);border:2px solid var(--gold);border-radius:14px;padding:30px;max-width:420px;text-align:center;font-family:Georgia,serif}
+.empty{color:var(--muted);font-style:italic;padding:20px;text-align:center;font-family:Arial,sans-serif}
+@media(max-width:600px){table,thead,tbody,th,td,tr{display:block}
+  thead{display:none}
+  tr{border:1px solid var(--border);border-radius:10px;margin-bottom:10px;padding:8px}
+  td{border:none;display:flex;justify-content:space-between;gap:10px}
+  td::before{content:attr(data-label);color:var(--muted);font-size:.7rem;text-transform:uppercase}
+}
+</style>
+</head>
+<body data-theme="light">
+<header>
+  <div>
+    <h1>⚖️ Asignador</h1>
+    <div class="sub">Control de casos por Comisaría y efectivo policial — Ley 32130</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn" id="themeBtn">🌓 Tema</button>
+    <button class="btn" id="installBtn" style="display:none">⬇️ Instalar</button>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <h2>Nueva asignación</h2>
+    <div class="grid">
+      <div><label>Código de sede</label><input id="sede" list="sedes" value="2606064501"></div>
+      <datalist id="sedes"><option value="2606064501 — 1ra F.P.P.C. Piura"></datalist>
+      <div><label>Año</label><input id="anio" maxlength="4" placeholder="2024"></div>
+      <div><label>N° de caso</label><input id="ncaso" maxlength="4" placeholder="1139"></div>
+      <div><label>Cuaderno</label><input id="cuaderno" maxlength="2" value="0"></div>
+    </div>
+    <div class="caso-preview" id="casoPreview">— — —</div>
+
+    <div class="grid" style="margin-top:16px">
+      <div>
+        <label>Unidad policial</label>
+        <select id="unidad">
+          <option>26 de Octubre</option><option>Algarrobos</option><option>Cucungará</option>
+          <option>DIVINCRI</option><option>Piura</option><option>San Martín</option><option value="otro">Otro…</option>
+        </select>
+      </div>
+      <div id="unidadOtroWrap" style="display:none"><label>Especificar unidad</label><input id="unidadOtro"></div>
+      <div><label>Nombre del efectivo</label><input id="nombre" placeholder="Apellidos y nombres"></div>
+      <div><label>DNI</label><input id="dni" maxlength="8" placeholder="12345678"></div>
+      <div><label>Celular</label><input id="celular" maxlength="9" placeholder="999999999"></div>
+    </div>
+
+    <div class="grid" style="margin-top:16px">
+      <div><label>Fecha de inicio de investigación</label><input type="date" id="fInicio"></div>
+      <div><label>Fecha de asignación</label><input type="date" id="fAsignacion"></div>
+      <div><label>Plazo otorgado (días)</label><input type="number" id="plazo" min="1" value="20"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="guardarBtn">💾 Guardar asignación</button>
+      <button class="btn" id="limpiarBtn">Limpiar</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Historial de asignaciones</h2>
+    <div class="filters">
+      <div><label>Filtrar por unidad</label>
+        <select id="filtroUnidad"><option value="">Todas</option></select>
+      </div>
+      <div><label>Filtrar por efectivo / DNI</label><input id="filtroEfectivo" placeholder="Buscar nombre o DNI"></div>
+      <div><label><input type="checkbox" id="soloVencidos" style="width:auto"> Solo vencidos</label></div>
+      <div><button class="btn" id="exportBtn">⬇️ Exportar CSV</button></div>
+    </div>
+    <div class="tbl-wrap">
+      <table id="tabla">
+        <thead><tr>
+          <th>Caso</th><th>Unidad</th><th>Efectivo</th><th>Inicio</th><th>Asignación</th><th>Plazo</th><th>Vence</th><th>Estado</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="empty" id="emptyMsg">Aún no hay asignaciones registradas.</div>
+    </div>
+  </div>
+</main>
+
+<footer>Asignador · Fiscalía de Piura · Datos guardados solo en este dispositivo</footer>
+
+<div id="dedico"><div class="box">
+  <h2 style="color:var(--red)">Para quien sostiene el orden en medio del caos</h2>
+  <p>Este pequeño sistema nace del esfuerzo diario por poner control donde el papel se pierde.<br>Dedicado a quienes investigan, sin descanso, para que la justicia llegue a tiempo.</p>
+  <button class="btn primary" onclick="document.getElementById('dedico').style.display='none'">Cerrar</button>
+</div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const LS_KEY='asignador_casos_v1', LS_THEME='asignador_theme';
+
+// Tema
+function applyTheme(t){document.body.setAttribute('data-theme',t);localStorage.setItem(LS_THEME,t)}
+applyTheme(localStorage.getItem(LS_THEME)||'light');
+$('themeBtn').onclick=()=>applyTheme(document.body.getAttribute('data-theme')==='light'?'dark':'light');
+
+// Unidad "Otro"
+$('unidad').onchange=()=>{$('unidadOtroWrap').style.display=$('unidad').value==='otro'?'block':'none'};
+
+// Preview de código de caso
+function codigoCaso(){
+  const sede=($('sede').value||'').split(' ')[0].trim();
+  const anio=($('anio').value||'____').padStart(4,'_');
+  const nc=($('ncaso').value||'____').padStart(4,'_');
+  const cu=$('cuaderno').value||'0';
+  return `${sede}-${anio}-${nc}-${cu}`;
+}
+['sede','anio','ncaso','cuaderno'].forEach(id=>$(id).addEventListener('input',()=>$('casoPreview').textContent=codigoCaso()));
+$('casoPreview').textContent=codigoCaso();
+
+// Almacenamiento
+function getCasos(){try{return JSON.parse(localStorage.getItem(LS_KEY))||[]}catch{return[]}}
+function saveCasos(arr){localStorage.setItem(LS_KEY,JSON.stringify(arr))}
+
+function diasEntre(desde,hasta){return Math.round((hasta-desde)/86400000)}
+
+function estadoDe(fAsig,plazoDias){
+  const venc=new Date(fAsig); venc.setDate(venc.getDate()+Number(plazoDias));
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const restantes=diasEntre(hoy,venc);
+  if(restantes<0) return {estado:'bad',texto:'Vencido',venc};
+  if(restantes<=5) return {estado:'warn',texto:`Por vencer (${restantes}d)`,venc};
+  return {estado:'ok',texto:`Vigente (${restantes}d)`,venc};
+}
+
+function poblarFiltroUnidad(){
+  const unidades=[...new Set(getCasos().map(c=>c.unidad))].sort();
+  const sel=$('filtroUnidad'); const cur=sel.value;
+  sel.innerHTML='<option value="">Todas</option>'+unidades.map(u=>`<option>${u}</option>`).join('');
+  sel.value=cur;
+}
+
+function render(){
+  const casos=getCasos();
+  poblarFiltroUnidad();
+  const fu=$('filtroUnidad').value, fe=($('filtroEfectivo').value||'').toLowerCase(), sv=$('soloVencidos').checked;
+  const tbody=document.querySelector('#tabla tbody'); tbody.innerHTML='';
+  let visibles=0;
+  casos.forEach((c,idx)=>{
+    const {estado,texto,venc}=estadoDe(c.fAsignacion,c.plazo);
+    if(fu && c.unidad!==fu) return;
+    if(fe && !(c.nombre.toLowerCase().includes(fe)||c.dni.includes(fe))) return;
+    if(sv && estado!=='bad') return;
+    visibles++;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td data-label="Caso"><b>${c.codigo}</b></td>
+      <td data-label="Unidad">${c.unidad}</td>
+      <td data-label="Efectivo">${c.nombre}<br><small>${c.dni} · ${c.celular}</small></td>
+      <td data-label="Inicio">${c.fInicio||'—'}</td>
+      <td data-label="Asignación">${c.fAsignacion}</td>
+      <td data-label="Plazo">${c.plazo}d</td>
+      <td data-label="Vence">${venc.toISOString().slice(0,10)}</td>
+      <td data-label="Estado"><span class="chip ${estado}">${texto}</span></td>
+      <td data-label=""><button class="icon-btn" onclick="borrar(${idx})" title="Eliminar">🗑️</button></td>`;
+    tbody.appendChild(tr);
+  });
+  $('emptyMsg').style.display=visibles?'none':'block';
+}
+
+function borrar(idx){
+  if(!confirm('¿Eliminar esta asignación del historial?'))return;
+  const casos=getCasos(); casos.splice(idx,1); saveCasos(casos); render();
+}
+window.borrar=borrar;
+
+$('guardarBtn').onclick=()=>{
+  const unidad=$('unidad').value==='otro'?($('unidadOtro').value||'Otro'):$('unidad').value;
+  const nombre=$('nombre').value.trim(), dni=$('dni').value.trim(), celular=$('celular').value.trim();
+  const fAsignacion=$('fAsignacion').value, plazo=$('plazo').value;
+  if(!nombre||!dni||!fAsignacion||!plazo){alert('Completa efectivo policial, DNI, fecha de asignación y plazo.');return}
+  const casos=getCasos();
+  casos.push({codigo:codigoCaso(),unidad,nombre,dni,celular,fInicio:$('fInicio').value,fAsignacion,plazo:Number(plazo),creado:new Date().toISOString()});
+  saveCasos(casos);
+  ['ncaso','nombre','dni','celular','fInicio','fAsignacion'].forEach(id=>$(id).value='');
+  $('unidadOtro').value=''; $('casoPreview').textContent=codigoCaso();
+  render();
+};
+$('limpiarBtn').onclick=()=>{['ncaso','nombre','dni','celular','fInicio','fAsignacion'].forEach(id=>$(id).value='');$('casoPreview').textContent=codigoCaso()};
+$('filtroUnidad').onchange=render; $('filtroEfectivo').oninput=render; $('soloVencidos').onchange=render;
+
+$('exportBtn').onclick=()=>{
+  const casos=getCasos();
+  const headers=['Caso','Unidad','Nombre','DNI','Celular','FechaInicio','FechaAsignacion','PlazoDias','FechaVence','Estado'];
+  const rows=casos.map(c=>{const {texto,venc}=estadoDe(c.fAsignacion,c.plazo);
+    return [c.codigo,c.unidad,c.nombre,c.dni,c.celular,c.fInicio,c.fAsignacion,c.plazo,venc.toISOString().slice(0,10),texto];});
+  const csv=[headers,...rows].map(r=>r.map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='asignador_historial.csv'; a.click();
+};
+
+render();
+
+// Instalación PWA
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredPrompt=e;$('installBtn').style.display='inline-block'});
+$('installBtn').onclick=async()=>{if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;$('installBtn').style.display='none'}};
+
+// Service worker
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+
+// Konami code — dedicatoria
+const seq=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+let pos=0;
+document.addEventListener('keydown',e=>{
+  pos=(e.key===seq[pos])?pos+1:0;
+  if(pos===seq.length){$('dedico').style.display='flex';pos=0}
+});
+</script>
+</body>
+</html>
