@@ -64,7 +64,7 @@ table{width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size
 th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
 th{color:var(--muted);font-weight:normal;text-transform:uppercase;font-size:.7rem}
 .chip{padding:3px 9px;border-radius:20px;font-size:.72rem;font-weight:bold;color:#fff;display:inline-block}
-.chip.ok{background:var(--ok)} .chip.warn{background:var(--warn);color:#3a2a00} .chip.bad{background:var(--bad)}
+.chip.ok{background:var(--ok)} .chip.warn{background:var(--warn);color:#3a2a00} .chip.bad{background:var(--bad)} .chip.done{background:var(--muted)}
 .tbl-wrap{overflow-x:auto}
 .icon-btn{background:none;border:none;cursor:pointer;font-size:1rem;color:var(--muted)}
 .icon-btn:hover{color:var(--red)}
@@ -100,8 +100,8 @@ footer{text-align:center;padding:20px;font-size:.75rem;color:var(--muted);font-f
     <div class="grid">
       <div><label>Código de sede</label><input id="sede" list="sedes" value="2606064501"></div>
       <datalist id="sedes"><option value="2606064501 — 1ra F.P.P.C. Piura"></datalist>
-      <div><label>Año</label><input id="anio" maxlength="4" placeholder="2024"></div>
-      <div><label>N° de caso</label><input id="ncaso" maxlength="4" placeholder="1139"></div>
+      <div><label>Año</label><input id="anio" maxlength="4" placeholder="2026"></div>
+      <div><label>N° de caso</label><input id="ncaso" maxlength="4" placeholder="1234"></div>
       <div><label>Cuaderno</label><input id="cuaderno" maxlength="2" value="0"></div>
     </div>
     <div class="caso-preview" id="casoPreview">— — —</div>
@@ -126,9 +126,16 @@ footer{text-align:center;padding:20px;font-size:.75rem;color:var(--muted);font-f
       <div><label>Plazo otorgado (días)</label><input type="number" id="plazo" min="1" value="20"></div>
     </div>
 
+    <div class="grid" style="margin-top:16px">
+      <div><label>Ampliación de plazo (días)</label><input type="number" id="ampliacion" min="0" value="0"></div>
+      <div><label>Fecha de ampliación</label><input type="date" id="fAmpliacion"></div>
+      <div><label>Fecha de devolución PNP (MP recibe)</label><input type="date" id="fDevolucion"></div>
+    </div>
+
     <div class="actions">
       <button class="btn primary" id="guardarBtn">💾 Guardar asignación</button>
       <button class="btn" id="limpiarBtn">Limpiar</button>
+      <button class="btn" id="cancelarEdicionBtn" style="display:none">✖️ Cancelar edición</button>
     </div>
   </div>
 
@@ -145,7 +152,7 @@ footer{text-align:center;padding:20px;font-size:.75rem;color:var(--muted);font-f
     <div class="tbl-wrap">
       <table id="tabla">
         <thead><tr>
-          <th>Caso</th><th>Unidad</th><th>Efectivo</th><th>Inicio</th><th>Asignación</th><th>Plazo</th><th>Vence</th><th>Estado</th><th></th>
+          <th>Caso</th><th>Unidad</th><th>Efectivo</th><th>Inicio</th><th>Asignación</th><th>Plazo</th><th>Vence</th><th>Devolución</th><th>Estado</th><th></th>
         </tr></thead>
         <tbody></tbody>
       </table>
@@ -191,13 +198,15 @@ function saveCasos(arr){localStorage.setItem(LS_KEY,JSON.stringify(arr))}
 
 function diasEntre(desde,hasta){return Math.round((hasta-desde)/86400000)}
 
-function estadoDe(fAsig,plazoDias){
-  const venc=new Date(fAsig); venc.setDate(venc.getDate()+Number(plazoDias));
+function estadoDe(fAsig,plazoDias,ampliacionDias,fDevolucion){
+  const plazoTotal=Number(plazoDias)+Number(ampliacionDias||0);
+  const venc=new Date(fAsig); venc.setDate(venc.getDate()+plazoTotal);
+  if(fDevolucion) return {estado:'done',texto:'Devuelto',venc,plazoTotal};
   const hoy=new Date(); hoy.setHours(0,0,0,0);
   const restantes=diasEntre(hoy,venc);
-  if(restantes<0) return {estado:'bad',texto:'Vencido',venc};
-  if(restantes<=5) return {estado:'warn',texto:`Por vencer (${restantes}d)`,venc};
-  return {estado:'ok',texto:`Vigente (${restantes}d)`,venc};
+  if(restantes<0) return {estado:'bad',texto:'Vencido',venc,plazoTotal};
+  if(restantes<=5) return {estado:'warn',texto:`Por vencer (${restantes}d)`,venc,plazoTotal};
+  return {estado:'ok',texto:`Vigente (${restantes}d)`,venc,plazoTotal};
 }
 
 function poblarFiltroUnidad(){
@@ -214,11 +223,12 @@ function render(){
   const tbody=document.querySelector('#tabla tbody'); tbody.innerHTML='';
   let visibles=0;
   casos.forEach((c,idx)=>{
-    const {estado,texto,venc}=estadoDe(c.fAsignacion,c.plazo);
+    const {estado,texto,venc,plazoTotal}=estadoDe(c.fAsignacion,c.plazo,c.ampliacion,c.fDevolucion);
     if(fu && c.unidad!==fu) return;
     if(fe && !(c.nombre.toLowerCase().includes(fe)||c.dni.includes(fe))) return;
     if(sv && estado!=='bad') return;
     visibles++;
+    const plazoTxt=c.ampliacion?`${c.plazo}d + ${c.ampliacion}d = ${plazoTotal}d`:`${c.plazo}d`;
     const tr=document.createElement('tr');
     tr.innerHTML=`
       <td data-label="Caso"><b>${c.codigo}</b></td>
@@ -226,10 +236,11 @@ function render(){
       <td data-label="Efectivo">${c.nombre}<br><small>${c.dni} · ${c.celular}</small></td>
       <td data-label="Inicio">${c.fInicio||'—'}</td>
       <td data-label="Asignación">${c.fAsignacion}</td>
-      <td data-label="Plazo">${c.plazo}d</td>
+      <td data-label="Plazo">${plazoTxt}${c.fAmpliacion?`<br><small>amp. ${c.fAmpliacion}</small>`:''}</td>
       <td data-label="Vence">${venc.toISOString().slice(0,10)}</td>
+      <td data-label="Devolución">${c.fDevolucion||'—'}</td>
       <td data-label="Estado"><span class="chip ${estado}">${texto}</span></td>
-      <td data-label=""><button class="icon-btn" onclick="borrar(${idx})" title="Eliminar">🗑️</button></td>`;
+      <td data-label=""><button class="icon-btn" onclick="editar(${idx})" title="Editar">✏️</button> <button class="icon-btn" onclick="borrar(${idx})" title="Eliminar">🗑️</button></td>`;
     tbody.appendChild(tr);
   });
   $('emptyMsg').style.display=visibles?'none':'block';
@@ -237,30 +248,64 @@ function render(){
 
 function borrar(idx){
   if(!confirm('¿Eliminar esta asignación del historial?'))return;
-  const casos=getCasos(); casos.splice(idx,1); saveCasos(casos); render();
+  const casos=getCasos(); casos.splice(idx,1); saveCasos(casos);
+  if(editIndex===idx) salirModoEdicion();
+  render();
 }
 window.borrar=borrar;
+
+let editIndex=null;
+function salirModoEdicion(){
+  editIndex=null;
+  $('guardarBtn').textContent='💾 Guardar asignación';
+  $('cancelarEdicionBtn').style.display='none';
+  ['sede','anio','ncaso','cuaderno','unidadOtro','nombre','dni','celular','fInicio','fAsignacion','fAmpliacion','fDevolucion'].forEach(id=>$(id).value='');
+  $('sede').value='2606064501'; $('cuaderno').value='0'; $('unidad').value='26 de Octubre';
+  $('unidadOtroWrap').style.display='none'; $('plazo').value=20; $('ampliacion').value=0;
+  $('casoPreview').textContent=codigoCaso();
+}
+
+function editar(idx){
+  const c=getCasos()[idx]; if(!c) return;
+  editIndex=idx;
+  const partes=c.codigo.split('-');
+  $('sede').value=partes[0]; $('anio').value=partes[1]; $('ncaso').value=partes[2]; $('cuaderno').value=partes[3];
+  const unidades=['26 de Octubre','Algarrobos','Cucungará','DIVINCRI','Piura','San Martín'];
+  if(unidades.includes(c.unidad)){$('unidad').value=c.unidad;$('unidadOtroWrap').style.display='none'}
+  else{$('unidad').value='otro';$('unidadOtro').value=c.unidad;$('unidadOtroWrap').style.display='block'}
+  $('nombre').value=c.nombre; $('dni').value=c.dni; $('celular').value=c.celular;
+  $('fInicio').value=c.fInicio||''; $('fAsignacion').value=c.fAsignacion; $('plazo').value=c.plazo;
+  $('ampliacion').value=c.ampliacion||0; $('fAmpliacion').value=c.fAmpliacion||''; $('fDevolucion').value=c.fDevolucion||'';
+  $('casoPreview').textContent=codigoCaso();
+  $('guardarBtn').textContent='💾 Actualizar asignación';
+  $('cancelarEdicionBtn').style.display='inline-block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+window.editar=editar;
+$('cancelarEdicionBtn').onclick=salirModoEdicion;
 
 $('guardarBtn').onclick=()=>{
   const unidad=$('unidad').value==='otro'?($('unidadOtro').value||'Otro'):$('unidad').value;
   const nombre=$('nombre').value.trim(), dni=$('dni').value.trim(), celular=$('celular').value.trim();
   const fAsignacion=$('fAsignacion').value, plazo=$('plazo').value;
   if(!nombre||!dni||!fAsignacion||!plazo){alert('Completa efectivo policial, DNI, fecha de asignación y plazo.');return}
+  const registro={codigo:codigoCaso(),unidad,nombre,dni,celular,fInicio:$('fInicio').value,fAsignacion,plazo:Number(plazo),
+    ampliacion:Number($('ampliacion').value)||0,fAmpliacion:$('fAmpliacion').value,fDevolucion:$('fDevolucion').value,
+    creado:new Date().toISOString()};
   const casos=getCasos();
-  casos.push({codigo:codigoCaso(),unidad,nombre,dni,celular,fInicio:$('fInicio').value,fAsignacion,plazo:Number(plazo),creado:new Date().toISOString()});
+  if(editIndex!==null){casos[editIndex]=registro;} else {casos.push(registro);}
   saveCasos(casos);
-  ['ncaso','nombre','dni','celular','fInicio','fAsignacion'].forEach(id=>$(id).value='');
-  $('unidadOtro').value=''; $('casoPreview').textContent=codigoCaso();
+  salirModoEdicion();
   render();
 };
-$('limpiarBtn').onclick=()=>{['ncaso','nombre','dni','celular','fInicio','fAsignacion'].forEach(id=>$(id).value='');$('casoPreview').textContent=codigoCaso()};
+$('limpiarBtn').onclick=salirModoEdicion;
 $('filtroUnidad').onchange=render; $('filtroEfectivo').oninput=render; $('soloVencidos').onchange=render;
 
 $('exportBtn').onclick=()=>{
   const casos=getCasos();
-  const headers=['Caso','Unidad','Nombre','DNI','Celular','FechaInicio','FechaAsignacion','PlazoDias','FechaVence','Estado'];
-  const rows=casos.map(c=>{const {texto,venc}=estadoDe(c.fAsignacion,c.plazo);
-    return [c.codigo,c.unidad,c.nombre,c.dni,c.celular,c.fInicio,c.fAsignacion,c.plazo,venc.toISOString().slice(0,10),texto];});
+  const headers=['Caso','Unidad','Nombre','DNI','Celular','FechaInicio','FechaAsignacion','PlazoInicialDias','AmpliacionDias','FechaAmpliacion','PlazoTotalDias','FechaVence','FechaDevolucion','Estado'];
+  const rows=casos.map(c=>{const {texto,venc,plazoTotal}=estadoDe(c.fAsignacion,c.plazo,c.ampliacion,c.fDevolucion);
+    return [c.codigo,c.unidad,c.nombre,c.dni,c.celular,c.fInicio,c.fAsignacion,c.plazo,c.ampliacion||0,c.fAmpliacion||'',plazoTotal,venc.toISOString().slice(0,10),c.fDevolucion||'',texto];});
   const csv=[headers,...rows].map(r=>r.map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='asignador_historial.csv'; a.click();
